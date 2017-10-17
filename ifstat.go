@@ -15,6 +15,10 @@ const (
 	ifNameOidPrefix              = ".1.3.6.1.2.1.31.1.1.1.1."
 	ifHCInOid                    = "1.3.6.1.2.1.31.1.1.1.6"
 	ifHCInOidPrefix              = ".1.3.6.1.2.1.31.1.1.1.6."
+	TXPowerOid                   = "1.3.6.1.4.1.25506.2.70.1.1.1.9"
+	TXPowerOidPrefix             = "1.3.6.1.4.1.25506.2.70.1.1.1.9."
+	RXPowerOid                   = "1.3.6.1.4.1.25506.2.70.1.1.1.12"
+	RXPowerOidPrefix             = "1.3.6.1.4.1.25506.2.70.1.1.1.12."
 	ifHCOutOid                   = "1.3.6.1.2.1.31.1.1.1.10"
 	ifHCInPktsOid                = "1.3.6.1.2.1.31.1.1.1.7"
 	ifHCInPktsOidPrefix          = ".1.3.6.1.2.1.31.1.1.1.7."
@@ -57,6 +61,8 @@ type IfStats struct {
 	IfIndex              int
 	IfHCInOctets         uint64
 	IfHCOutOctets        uint64
+	TXPowerOctets        uint64
+	RXPowerOctets        uint64
 	IfHCInUcastPkts      uint64
 	IfHCOutUcastPkts     uint64
 	IfHCInBroadcastPkts  uint64
@@ -99,6 +105,9 @@ func ListIfStats(ip, community string, timeout int, ignoreIface []string, retry 
 	chIfNameList := make(chan []gosnmp.SnmpPDU)
 	chIfSpeedList := make(chan []gosnmp.SnmpPDU)
 
+	chTXPowerList := make(chan []gosnmp.SnmpPDU)
+	chRXPowerList := make(chan []gosnmp.SnmpPDU)
+
 	limitCh <- true
 	go ListIfHCInOctets(ip, community, timeout, chIfInList, retry, limitCh)
 	time.Sleep(5 * time.Millisecond)
@@ -110,6 +119,12 @@ func ListIfStats(ip, community string, timeout int, ignoreIface []string, retry 
 	time.Sleep(5 * time.Millisecond)
 	limitCh <- true
 	go ListIfSpeed(ip, community, timeout, chIfSpeedList, retry, limitCh)
+	time.Sleep(5 * time.Millisecond)
+	limitCh <- true
+	go ListTXPowerOctets(ip, community, timeout, chTXPowerList, retry, limitCh)
+	time.Sleep(5 * time.Millisecond)
+	limitCh <- true
+	go ListRXPowerOctets(ip, community, timeout, chRXPowerList, retry, limitCh)
 	time.Sleep(5 * time.Millisecond)
 
 	// OperStatus
@@ -396,6 +411,14 @@ func ListIfHCInOctets(ip, community string, timeout int, ch chan []gosnmp.SnmpPD
 
 func ListIfHCOutOctets(ip, community string, timeout int, ch chan []gosnmp.SnmpPDU, retry int, limitCh chan bool) {
 	RunSnmpRetry(ip, community, timeout, ch, retry, limitCh, ifHCOutOid)
+}
+
+func ListTXPowerOctets(ip, community string, timeout int, ch chan []gosnmp.SnmpPDU, retry int, limitCh chan bool) {
+	RunSnmpRetry(ip, community, timeout, ch, retry, limitCh, TXPowerOid)
+}
+
+func ListRXPowerOctets(ip, community string, timeout int, ch chan []gosnmp.SnmpPDU, retry int, limitCh chan bool) {
+	RunSnmpRetry(ip, community, timeout, ch, retry, limitCh, RXPowerOid)
 }
 
 func ListIfHCInUcastPkts(ip, community string, timeout int, ch chan []gosnmp.SnmpPDU, retry int, limitCh chan bool) {
