@@ -23,17 +23,26 @@ func ListIfStatsSnmpWalk(ip, community string, timeout int, ignoreIface []string
 	chIfNameMap := make(chan map[string]string)
 	chIfSpeedMap := make(chan map[string]string)
 
+	chTXPowerMap := make(chan map[string]string)
+	chRXPowerMap := make(chan map[string]string)
+
 	go WalkIfIn(ip, community, timeout, chIfInMap, retry)
 	go WalkIfOut(ip, community, timeout, chIfOutMap, retry)
 
 	go WalkIfName(ip, community, timeout, chIfNameMap, retry)
 	go WalkIfSpeed(ip, community, timeout, chIfSpeedMap, retry)
 
+	go WalkTXPower(ip, community, timeout, chTXPowerMap, retry)
+	go WalkRXPower(ip, community, timeout, chRXPowerMap, retry)
+
 	ifInMap := <-chIfInMap
 	ifOutMap := <-chIfOutMap
 
 	ifNameMap := <-chIfNameMap
 	ifSpeedMap := <-chIfSpeedMap
+
+	TXPowerMap := <-chTXPowerMap
+	RXPowerMap := <-chRXPowerMap
 
 	var ifStatusMap map[string]string
 	chIfStatusMap := make(chan map[string]string)
@@ -142,6 +151,8 @@ func ListIfStatsSnmpWalk(ip, community string, timeout int, ignoreIface []string
 				ifStats.IfIndex, _ = strconv.Atoi(ifIndex)
 				ifStats.IfHCInOctets, _ = strconv.ParseUint(ifInMap[ifIndex], 10, 64)
 				ifStats.IfHCOutOctets, _ = strconv.ParseUint(ifOutMap[ifIndex], 10, 64)
+				ifStats.TXPowerOctets, _ = strconv.ParseUint(TXPowerMap[ifIndex], 10, 64)
+				ifStats.RXPowerOctets, _ = strconv.ParseUint(RXPowerMap[ifIndex], 10, 64)
 
 				if ignorePkt == false {
 					ifStats.IfHCInUcastPkts, _ = strconv.ParseUint(ifInPktMap[ifIndex], 10, 64)
@@ -206,6 +217,14 @@ func WalkIfIn(ip, community string, timeout int, ch chan map[string]string, retr
 
 func WalkIfOut(ip, community string, timeout int, ch chan map[string]string, retry int) {
 	WalkIf(ip, ifHCOutOid, community, timeout, retry, ch)
+}
+
+func WalkTXPower(ip, community string, timeout int, ch chan map[string]string, retry int) {
+	WalkIf(ip, TXPowerOid, community, timeout, retry, ch)
+}
+
+func WalkRXPower(ip, community string, timeout int, ch chan map[string]string, retry int) {
+	WalkIf(ip, RXPowerOid, community, timeout, retry, ch)
 }
 
 func WalkIfInPkts(ip, community string, timeout int, ch chan map[string]string, retry int) {
